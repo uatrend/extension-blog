@@ -12,7 +12,7 @@ class ReadmorePlugin implements EventSubscriberInterface
      *
      * @param ContentEvent $event
      */
-    public function onContentPlugins(ContentEvent $event)
+    public function onContentPlugins(ContentEvent $event): void
     {
         $content = preg_split('/\[readmore\]/i', $event->getContent());
 
@@ -27,10 +27,10 @@ class ReadmorePlugin implements EventSubscriberInterface
     /**
      * {@inheritdoc}
      */
-    public function subscribe()
+    public function subscribe(): array
     {
         return [
-            'content.plugins' => ['onContentPlugins', 10]
+            'content.plugins' => ['onContentPlugins', 20]
         ];
     }
 }

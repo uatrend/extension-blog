@@ -1,5 +1,5 @@
-Vue.ready(function () {
-    jQuery('time').each(function() {
-        new Vue({}).$mount(this);
+Vue.ready(() => {
+    UIkit.util.findAll('time').forEach((time) => {
+        new Vue({}).$mount(time);
     });
 });
