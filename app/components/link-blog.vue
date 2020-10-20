@@ -1,56 +1,65 @@
 <template>
-
-    <div class="uk-form-row">
-        <label for="form-link-blog" class="uk-form-label">{{ 'View' | trans }}</label>
+    <div class="uk-margin">
+        <label class="uk-form-label">{{ 'Posts' | trans }}</label>
         <div class="uk-form-controls">
-            <select id="form-link-blog" class="uk-width-1-1" v-model="link">
-                <option value="@blog">{{ 'Posts View' | trans }}</option>
+            <select v-model="post" class="uk-width-1-1 uk-select">
+                <option value="@blog">
+                    {{ 'Posts View' | trans }}
+                </option>
                 <optgroup :label="'Posts' | trans">
-                    <option v-for="p in posts" :value="p | link">{{ p.title }}</option>
+                    <option v-for="p in posts" :key="p.id" :value="p | link">
+                        {{ p.title }}
+                    </option>
                 </optgroup>
             </select>
         </div>
     </div>
-
 </template>
 
 <script>
 
-    module.exports = {
+const LinkBlog = {
 
-        link: {
-            label: 'Blog'
-        },
+    link: { label: 'Blog' },
 
-        props: ['link'],
+    data() {
+        return {
+            posts: [],
+            post: ''
+        };
+    },
 
-        data: function () {
-            return {
-                posts: []
-            }
-        },
+    created() {
+        // TODO: Implement pagination or search
+        this.$http.get('api/blog/post', { params: { filter: { limit: 1000 } } }).then(function (res) {
+            this.$set(this, 'posts', res.data.posts);
+        });
+    },
 
-        created: function () {
-            // TODO: Implement pagination or search
-            this.$http.get('api/blog/post', {filter: {limit: 1000}}).then(function (res) {
-                this.$set('posts', res.data.posts);
-            });
-        },
+    mounted() {
+        this.post = '@blog';
+    },
 
-        ready: function() {
-            this.link = '@blog';
-        },
+    watch: {
 
-        filters: {
-
-            link: function (post) {
-                return '@blog/id?id='+post.id;
-            }
-
+        post(post) {
+            this.$emit('input', post);
         }
 
-    };
+    },
 
-    window.Links.components['link-blog'] = module.exports;
+    filters: {
+
+        link(post) {
+            return `@blog/id?id=${post.id}`;
+        }
+
+    }
+
+};
+
+export default LinkBlog;
+
+window.Links.default.components['link-blog'] = LinkBlog;
 
 </script>

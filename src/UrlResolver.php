@@ -11,15 +11,9 @@ class UrlResolver implements ParamsResolverInterface
 {
     const CACHE_KEY = 'blog.routing';
 
-    /**
-     * @var bool
-     */
-    protected $cacheDirty = false;
+    protected bool $cacheDirty = false;
 
-    /**
-     * @var array
-     */
-    protected $cacheEntries;
+    protected array $cacheEntries;
 
     /**
      * Constructor.
@@ -32,7 +26,7 @@ class UrlResolver implements ParamsResolverInterface
     /**
      * {@inheritdoc}
      */
-    public function match(array $parameters = [])
+    public function match(array $parameters = []): array
     {
         if (isset($parameters['id'])) {
             return $parameters;
@@ -62,13 +56,14 @@ class UrlResolver implements ParamsResolverInterface
         }
 
         $parameters['id'] = $id;
+
         return $parameters;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function generate(array $parameters = [])
+    public function generate(array $parameters = []): array
     {
         $id = $parameters['id'];
 
@@ -106,10 +101,8 @@ class UrlResolver implements ParamsResolverInterface
 
     /**
      * Gets the blog's permalink setting.
-     *
-     * @return string
      */
-    public static function getPermalink()
+    public static function getPermalink(): string
     {
         static $permalink;
 
@@ -127,7 +120,7 @@ class UrlResolver implements ParamsResolverInterface
         return $permalink;
     }
 
-    protected function addCache($post)
+    protected function addCache($post): void
     {
         $this->cacheEntries[$post->id] = [
             'id'     => $post->id,

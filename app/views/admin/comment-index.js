@@ -1,15 +1,17 @@
-module.exports = {
+import { ValidationObserver, VInput } from '@system/app/components/validation.vue';
+
+const Comments = {
 
     name: 'comment',
 
     el: '#comments',
 
-    data: function () {
+    mixins: [Theme.Mixins.Helper],
+
+    data() {
         return _.merge({
             posts: [],
-            config: {
-                filter: this.$session.get('comments.filter', {})
-            },
+            config: { filter: this.$session.get('comments.filter', {}) },
             comments: false,
             pages: 0,
             count: '',
@@ -20,18 +22,78 @@ module.exports = {
         }, window.$data);
     },
 
-    ready: function () {
+    theme: {
+        hideEls: ['#comments > div:first-child'],
+        elements() {
+            const vm = this;
+            return {
+                search: {
+                    scope: 'navbar-right',
+                    type: 'search',
+                    class: 'uk-text-small',
+                    domProps: { value: () => vm.config.filter.search || '' },
+                    on: {
+                        input(e) {
+                            !vm.config.filter.search && vm.$set(vm.config.filter, 'search', '');
+                            vm.config.filter.search = e.target.value;
+                        }
+                    }
+                },
+                selected: {
+                    scope: 'topmenu-right',
+                    type: 'caption',
+                    caption: () => {
+                        if (!vm.selected.length) return vm.$transChoice('{0} %count% Comments|{1} %count% Comment|]1,Inf[ %count% Comments', vm.count, { count: vm.count });
+                        return vm.$transChoice('{1} %count% Comment selected|]1,Inf[ %count% Comments selected', vm.selected.length, { count: vm.selected.length });
+                    },
+                    class: 'uk-text-small',
+                    priority: 1
+                },
+                actions: {
+                    scope: 'topmenu-left',
+                    type: 'dropdown',
+                    caption: 'Actions',
+                    class: 'uk-button uk-button-text',
+                    icon: { attrs: { 'uk-icon': 'triangle-down' } },
+                    dropdown: { options: () => 'mode:click' },
+                    actionIcons: true,
+                    items: () => ({
+                        publish: {
+                            caption: 'Approve',
+                            on: { click: () => vm.status(1) }
+                        },
+                        unpublish: {
+                            caption: 'Unapprove',
+                            on: { click: () => vm.status(0) }
+                        },
+                        spam: { on: { click: () => vm.status(2) } },
+                        delete: {
+                            caption: 'Remove',
+                            on: { click: (e) => vm.remove(e) },
+                            directives: [
+                                {
+                                    name: 'confirm',
+                                    value: 'Delete Comments?'
+                                }
+                            ]
+                        }
+                    }),
+                    priority: 2,
+                    disabled: () => !vm.selected.length
+                }
+            };
+        }
+    },
 
+    mounted() {
         this.Comments = this.$resource('api/blog/comment{/id}');
-        this.$watch('config.page', this.load, {immediate: true});
-
-        UIkit.init(this.$el);
+        this.$watch('config.page', this.load, { immediate: true });
     },
 
     watch: {
 
         'config.filter': {
-            handler: function (filter) {
+            handler(filter) {
                 if (this.config.page) {
                     this.config.page = 0;
                 } else {
@@ -47,29 +109,26 @@ module.exports = {
 
     computed: {
 
-        statusOptions: function () {
+        statusOptions() {
+            const options = _.map(this.$data.statuses, (status, id) => ({ text: status, value: id }));
 
-            var options = _.map(this.$data.statuses, function (status, id) {
-                return {text: status, value: id};
-            });
-
-            return [{label: this.$trans('Filter by'), options: options}];
+            return [{ label: this.$trans('Filter by'), options }];
         }
 
     },
 
     methods: {
 
-        active: function (comment) {
-            return this.selected.indexOf(comment.id) != -1;
+        active(comment) {
+            return this.selected.indexOf(comment.id) !== -1;
         },
 
-        submit: function () {
+        submit() {
             this.save(this.editComment.id ? this.editComment : this.replyComment);
         },
 
-        save: function (comment) {
-            return this.Comments.save({id: comment.id}, {comment: comment}).then(function () {
+        save(comment) {
+            return this.Comments.save({ id: comment.id }, { comment }).then(function () {
                 this.load();
                 this.$notify('Comment saved.');
             }, function (res) {
@@ -77,81 +136,78 @@ module.exports = {
             });
         },
 
-        status: function (status) {
+        status(status) {
+            const comments = this.getSelected();
 
-            var comments = this.getSelected();
-
-            comments.forEach(function (comment) {
+            comments.forEach((comment) => {
                 comment.status = status;
             });
 
-            this.Comments.save({id: 'bulk'}, {comments: comments}).then(function () {
+            this.Comments.save({ id: 'bulk' }, { comments }).then(function () {
                 this.load();
                 this.$notify('Comments saved.');
             });
         },
 
-        remove: function () {
-            this.Comments.delete({id: 'bulk'}, {ids: this.selected}).then(function () {
+        remove() {
+            this.Comments.delete({ id: 'bulk' }, { ids: this.selected }).then(function () {
                 this.load();
                 this.$notify('Comments deleted.');
             });
         },
 
-        load: function () {
-
+        load() {
             this.cancel();
 
-            this.Comments.query({filter: this.config.filter, post: this.config.post && this.config.post.id || 0, page: this.config.page, limit: this.config.limit}).then(function (res) {
+            this.Comments.query({ filter: this.config.filter, post: this.config.post && this.config.post.id || 0, page: this.config.page, limit: this.config.limit }).then(function (res) {
+                const { data } = res;
 
-                var data = res.data;
-
-                this.$set('posts', data.posts);
-                this.$set('comments', data.comments);
-                this.$set('pages', data.pages);
-                this.$set('count', data.count);
-                this.$set('selected', []);
+                this.$set(this, 'posts', data.posts);
+                this.$set(this, 'comments', data.comments);
+                this.$set(this, 'pages', data.pages);
+                this.$set(this, 'count', data.count);
+                this.$set(this, 'selected', []);
             });
         },
 
-        getSelected: function () {
-            var vm = this;
-            return this.comments.filter(function (comment) {
-                return vm.selected.indexOf(comment.id) !== -1;
-            });
+        getSelected() {
+            const vm = this;
+            return this.comments.filter((comment) => vm.selected.indexOf(comment.id) !== -1);
         },
 
-        getStatusText: function (comment) {
+        getStatusText(comment) {
             return this.statuses[comment.status];
         },
 
-        cancel: function () {
-            this.$set('replyComment', {});
-            this.$set('editComment', {});
+        cancel(e) {
+            this.$set(this, 'replyComment', {});
+            this.$set(this, 'editComment', {});
         },
 
-        reply: function (comment) {
+        reply(comment) {
             this.cancel();
-            this.$set('replyComment', {parent_id: comment.id, post_id: comment.post_id, author: this.user.name, email: this.user.email});
+            this.$set(this, 'replyComment', { parent_id: comment.id, post_id: comment.post_id, author: this.user.name, email: this.user.email });
         },
 
-        edit: function (comment) {
+        edit(comment) {
             this.cancel();
-            this.$set('editComment', _.merge({}, comment));
+            this.$set(this, 'editComment', _.merge({}, comment));
         },
 
-        toggleStatus: function (comment) {
+        toggleStatus(comment) {
             comment.status = comment.status === 1 ? 0 : 1;
             this.save(comment);
         }
 
     },
 
-    partials: {
-        'default-row': '#default-row',
-        'edit-row': '#edit-row'
+    components: {
+        ValidationObserver,
+        VInput
     }
 
 };
 
-Vue.ready(module.exports);
+export default Comments;
+
+Vue.ready(Comments);
